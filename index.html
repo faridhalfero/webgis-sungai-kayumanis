@@ -4,10 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebGIS Monitoring Sungai & Kayu Manis</title>
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Esri Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.css" />
+  <!-- Leaflet Draw CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     body { margin:0; padding:0; font-family:Arial; }
@@ -30,23 +33,48 @@
     <p><i style="background:#8B4513; width:15px; height:15px; display:inline-block;"></i> Kebun Kayu Manis</p>
   </div>
 
+  <!-- Load JavaScript Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script>
-    // Inisialisasi peta
+    // Inisialisasi peta dengan base map Esri Satellite
     const map = L.map('map').setView([-2.06668, 101.40592], 13);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    
+    // Tambahkan base map Esri Satellite
+    const esriSatellite = L.esri.basemapLayer('Imagery').addTo(map);
+    
+    // Tambahkan label dari Esri
+    const esriLabels = L.esri.basemapLayer('ImageryLabels').addTo(map);
+    
+    // Alternatif base map (jika diperlukan)
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
+    });
+    
+    // Layer control
+    const baseLayers = {
+      "Esri Satellite": esriSatellite,
+      "OpenStreetMap": osm
+    };
+    
+    const overlayLayers = {};
+    L.control.layers(baseLayers, overlayLayers).addTo(map);
 
     // Load data GeoJSON
     fetch('data/cinnamon.geojson')
       .then(response => response.json())
       .then(data => {
-        L.geoJSON(data, {
+        const cinnamonLayer = L.geoJSON(data, {
           style: { fillColor: '#8B4513', weight: 2, color: '#654321', fillOpacity: 0.5 },
           onEachFeature: function(feature, layer) {
             layer.bindPopup(`<b>${feature.properties.name}</b><br>Luas: ${feature.properties.area} ha`);
           }
         }).addTo(map);
+        
+        // Tambahkan ke layer control
+        overlayLayers["Kebun Kayu Manis"] = cinnamonLayer;
+        L.control.layers(baseLayers, overlayLayers).addTo(map);
       });
 
     // Fitur draw polygon
@@ -54,8 +82,21 @@
     map.addLayer(drawnItems);
     
     const drawControl = new L.Control.Draw({
-      draw: { polygon: true, marker:false, circle:false, polyline:false, rectangle:false },
-      edit: { featureGroup: drawnItems }
+      draw: { 
+        polygon: {
+          shapeOptions: {
+            color: '#f39c12',
+            fillOpacity: 0.3
+          }
+        }, 
+        marker: false, 
+        circle: false, 
+        polyline: false, 
+        rectangle: false 
+      },
+      edit: { 
+        featureGroup: drawnItems 
+      }
     });
     map.addControl(drawControl);
 
