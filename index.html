@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebGIS Monitoring Sungai & Kayu Manis</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { margin:0; padding:0; font-family:Arial; }
+    #map { height:100vh; width:100%; }
+    .toolbar { position:absolute; top:10px; right:10px; z-index:1000; background:white; padding:5px; border-radius:5px; }
+    .legend { position:absolute; bottom:10px; left:10px; z-index:1000; background:white; padding:10px; border-radius:5px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  
+  <div class="toolbar">
+    <button id="drawPolygon"><i class="fas fa-draw-polygon"></i></button>
+    <button id="exportImage"><i class="fas fa-camera"></i></button>
+  </div>
+  
+  <div class="legend">
+    <h4>Legenda:</h4>
+    <p><i style="background:#3498db; width:15px; height:15px; display:inline-block;"></i> Sungai</p>
+    <p><i style="background:#8B4513; width:15px; height:15px; display:inline-block;"></i> Kebun Kayu Manis</p>
+  </div>
+
+  <script>
+    // Inisialisasi peta
+    const map = L.map('map').setView([-2.06668, 101.40592], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    // Load data GeoJSON
+    fetch('data/cinnamon.geojson')
+      .then(response => response.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: { fillColor: '#8B4513', weight: 2, color: '#654321', fillOpacity: 0.5 },
+          onEachFeature: function(feature, layer) {
+            layer.bindPopup(`<b>${feature.properties.name}</b><br>Luas: ${feature.properties.area} ha`);
+          }
+        }).addTo(map);
+      });
+
+    // Fitur draw polygon
+    const drawnItems = new L.FeatureGroup();
+    map.addLayer(drawnItems);
+    
+    const drawControl = new L.Control.Draw({
+      draw: { polygon: true, marker:false, circle:false, polyline:false, rectangle:false },
+      edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+
+    map.on('draw:created', function(e) {
+      drawnItems.addLayer(e.layer);
+      if (e.layerType === 'polygon') {
+        const area = L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0]);
+        e.layer.bindPopup(`Area: ${(area/10000).toFixed(2)} ha`);
+      }
+    });
+
+    document.getElementById('drawPolygon').addEventListener('click', function() {
+      new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
+    });
+
+    document.getElementById('exportImage').addEventListener('click', function() {
+      alert("Fitur export akan bekerja setelah diupload ke GitHub");
+    });
+  </script>
+</body>
+</html>
