@@ -3,118 +3,346 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebGIS Monitoring Sungai & Kayu Manis</title>
-  <!-- Leaflet CSS -->
+  <title>WebGIS Lengkap: Draw & Export Peta</title>
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Esri Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.css" />
-  <!-- Leaflet Draw CSS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Esri Leaflet -->
+  <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+  <!-- Leaflet Draw (untuk menggambar polygon) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <!-- Leaflet Export (untuk save as image/PDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet-print@1.6.0/dist/leaflet.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { margin:0; padding:0; font-family:Arial; }
-    #map { height:100vh; width:100%; }
-    .toolbar { position:absolute; top:10px; right:10px; z-index:1000; background:white; padding:5px; border-radius:5px; }
-    .legend { position:absolute; bottom:10px; left:10px; z-index:1000; background:white; padding:10px; border-radius:5px; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+    }
+    #header {
+      background: linear-gradient(135deg, #3498db, #2c3e50);
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    #map {
+      height: 600px;
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+    .info-panel {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .legend {
+      padding: 10px;
+      background: white;
+      border-radius: 5px;
+      margin-top: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.8;
+    }
+    .toolbar {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 5px;
+      border-radius: 5px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+    }
+    .toolbar button {
+      margin: 3px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .cinnamon-icon {
+      background: #8B4513;
+      border-radius: 50%;
+      border: 2px solid #FFF;
+    }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  
-  <div class="toolbar">
-    <button id="drawPolygon"><i class="fas fa-draw-polygon"></i></button>
-    <button id="exportImage"><i class="fas fa-camera"></i></button>
-  </div>
-  
-  <div class="legend">
-    <h4>Legenda:</h4>
-    <p><i style="background:#3498db; width:15px; height:15px; display:inline-block;"></i> Sungai</p>
-    <p><i style="background:#8B4513; width:15px; height:15px; display:inline-block;"></i> Kebun Kayu Manis</p>
+  <div id="header">
+    <h1><i class="fas fa-map-marked-alt"></i> WebGIS Monitoring Sungai & Perkebunan Kayu Manis</h1>
+    <p>Pemantauan Sungai Batanghari dan Perkebunan Kayu Manis dengan Fitur Draw & Export</p>
   </div>
 
-  <!-- Load JavaScript Libraries -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <div class="container">
+    <!-- Toolbar Custom -->
+    <div class="toolbar">
+      <button id="drawPolygon" title="Gambar Polygon"><i class="fas fa-draw-polygon"></i></button>
+      <button id="exportImage" title="Export as Image"><i class="fas fa-camera"></i></button>
+      <button id="exportPDF" title="Export as PDF"><i class="fas fa-file-pdf"></i></button>
+    </div>
+
+    <div id="map"></div>
+    
+    <div class="info-panel">
+      <h3><i class="fas fa-tools"></i> Panduan Penggunaan:</h3>
+      <ol>
+        <li><strong>Gambar Polygon</strong>: Klik tombol <i class="fas fa-draw-polygon"></i> lalu gambar di peta</li>
+        <li><strong>Export Peta</strong>: Simpan sebagai gambar (PNG) atau PDF</li>
+        <li><strong>Ganti Basemap</strong>: Gunakan toolbar di kanan atas</li>
+      </ol>
+      
+      <div class="legend">
+        <h4><i class="fas fa-map-legend"></i> Legenda:</h4>
+        <p><i style="background: #3498db;"></i> Sungai Utama</p>
+        <p><i style="background: #e74c3c;"></i> Titik Pemantauan</p>
+        <p><i style="background: #2ecc71;"></i> Kawasan Konservasi</p>
+        <p><i style="background: #8B4513;"></i> Perkebunan Kayu Manis</p>
+        <p><i style="background: #f39c12; border: 2px dashed #000;"></i> Polygon Buatan</p>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Inisialisasi peta dengan base map Esri Satellite
+    // Inisialisasi Peta
     const map = L.map('map').setView([-2.06668, 101.40592], 13);
-    
-    // Tambahkan base map Esri Satellite
-    const esriSatellite = L.esri.basemapLayer('Imagery').addTo(map);
-    
-    // Tambahkan label dari Esri
-    const esriLabels = L.esri.basemapLayer('ImageryLabels').addTo(map);
-    
-    // Alternatif base map (jika diperlukan)
+
+    // ======================
+    // BASEMAP LAYERS
+    // ======================
+    const esriImagery = L.esri.basemapLayer('Imagery');
+    const esriTopo = L.esri.basemapLayer('Topographic');
     const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap'
     });
     
-    // Layer control
-    const baseLayers = {
-      "Esri Satellite": esriSatellite,
-      "OpenStreetMap": osm
-    };
-    
-    const overlayLayers = {};
-    L.control.layers(baseLayers, overlayLayers).addTo(map);
+    // Tambahkan basemap default
+    esriImagery.addTo(map);
 
-    // Load data GeoJSON
-    fetch('data/cinnamon.geojson')
-      .then(response => response.json())
-      .then(data => {
-        const cinnamonLayer = L.geoJSON(data, {
-          style: { fillColor: '#8B4513', weight: 2, color: '#654321', fillOpacity: 0.5 },
-          onEachFeature: function(feature, layer) {
-            layer.bindPopup(`<b>${feature.properties.name}</b><br>Luas: ${feature.properties.area} ha`);
+    // ======================
+    // LAYER DATA
+    // ======================
+    // Sungai (Polyline)
+    const sungaiBatanghari = L.polyline(
+      [
+        [-2.06668, 101.40592],
+        [-2.07000, 101.41000],
+        [-2.07500, 101.41500]
+      ],
+      { color: '#3498db', weight: 5 }
+    ).addTo(map).bindPopup("Sungai Batanghari");
+
+    // Titik Pemantauan
+    const titikPemantauan = L.marker([-2.068, 101.408], {
+      icon: L.divIcon({
+        html: '<i class="fas fa-tint" style="color: #e74c3c; font-size: 20px;"></i>',
+        className: 'custom-icon'
+      })
+    }).addTo(map).bindPopup("Titik Pemantauan Kualitas Air");
+
+    // Area Konservasi
+    const konservasi = L.polygon(
+      [
+        [-2.063, 101.402],
+        [-2.063, 101.408],
+        [-2.070, 101.408],
+        [-2.070, 101.402]
+      ],
+      { color: '#2ecc71', fillOpacity: 0.3 }
+    ).addTo(map).bindPopup("Kawasan Konservasi");
+
+    // ======================
+    // LAYER KAYU MANIS GEOJSON
+    // ======================
+    // Data GeoJSON untuk perkebunan kayu manis (contoh data)
+    const cinnamonPlantations = {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Kebun Kayu Manis Utara",
+            "area": "12.5",
+            "owner": "PT Rempah Nusantara"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [-2.062, 101.407],
+                [-2.062, 101.412],
+                [-2.067, 101.412],
+                [-2.067, 101.407],
+                [-2.062, 101.407]
+              ]
+            ]
           }
-        }).addTo(map);
-        
-        // Tambahkan ke layer control
-        overlayLayers["Kebun Kayu Manis"] = cinnamonLayer;
-        L.control.layers(baseLayers, overlayLayers).addTo(map);
-      });
+        },
+        {
+          "type": "Feature",
+          "properties": {
+            "name": "Kebun Kayu Manis Selatan",
+            "area": "8.2",
+            "owner": "Koperasi Tani Mandiri"
+          },
+          "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [-2.072, 101.403],
+                [-2.072, 101.409],
+                [-2.078, 101.409],
+                [-2.078, 101.403],
+                [-2.072, 101.403]
+              ]
+            ]
+          }
+        }
+      ]
+    };
 
-    // Fitur draw polygon
+    // Style untuk layer kayu manis
+    function cinnamonStyle(feature) {
+      return {
+        fillColor: '#8B4513', // Warna coklat kayu manis
+        weight: 2,
+        opacity: 1,
+        color: '#654321',
+        fillOpacity: 0.5
+      };
+    }
+
+    // Fungsi untuk menampilkan popup informasi
+    function onEachFeature(feature, layer) {
+      if (feature.properties) {
+        const popupContent = `
+          <b>${feature.properties.name || 'Kebun Kayu Manis'}</b><br>
+          Luas: ${feature.properties.area} hektar<br>
+          Pemilik: ${feature.properties.owner}
+        `;
+        layer.bindPopup(popupContent);
+      }
+    }
+
+    // Tambahkan layer GeoJSON ke peta
+    const cinnamonLayer = L.geoJSON(cinnamonPlantations, {
+      style: cinnamonStyle,
+      onEachFeature: onEachFeature
+    }).addTo(map);
+
+    // ======================
+    // FITUR DRAW POLYGON
+    // ======================
+    // Layer untuk menyimpan polygon yang digambar
     const drawnItems = new L.FeatureGroup();
     map.addLayer(drawnItems);
-    
+
+    // Inisialisasi Leaflet Draw
     const drawControl = new L.Control.Draw({
-      draw: { 
+      position: 'topright',
+      draw: {
         polygon: {
           shapeOptions: {
-            color: '#f39c12',
-            fillOpacity: 0.3
-          }
-        }, 
-        marker: false, 
-        circle: false, 
-        polyline: false, 
-        rectangle: false 
+              color: '#f39c12',
+              fillOpacity: 0.3,
+              dashArray: '5, 5'
+          },
+          allowIntersection: false,
+          showArea: true
+        },
+        marker: false,
+        circle: false,
+        polyline: false,
+        rectangle: false
       },
-      edit: { 
-        featureGroup: drawnItems 
+      edit: {
+          featureGroup: drawnItems
       }
     });
     map.addControl(drawControl);
 
+    // Event ketika polygon selesai digambar
     map.on('draw:created', function(e) {
-      drawnItems.addLayer(e.layer);
+      const layer = e.layer;
+      drawnItems.addLayer(layer);
+      
+      // Hitung luas area (jika polygon)
       if (e.layerType === 'polygon') {
-        const area = L.GeometryUtil.geodesicArea(e.layer.getLatLngs()[0]);
-        e.layer.bindPopup(`Area: ${(area/10000).toFixed(2)} ha`);
+        const area = L.GeometryUtil.geodesicArea(layer.getLatLngs()[0]);
+        layer.bindPopup(`Area: ${(area / 10000).toFixed(2)} hektar`);
       }
     });
 
+    // Tombol manual untuk draw polygon
     document.getElementById('drawPolygon').addEventListener('click', function() {
       new L.Draw.Polygon(map, drawControl.options.draw.polygon).enable();
     });
 
+    // ======================
+    // FITUR EXPORT PETA
+    // ======================
+    // Export as Image (PNG)
     document.getElementById('exportImage').addEventListener('click', function() {
-      alert("Fitur export akan bekerja setelah diupload ke GitHub");
+      html2canvas(document.querySelector('#map')).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'peta-sungai-kayu-manis.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
     });
+
+    // Export as PDF
+    document.getElementById('exportPDF').addEventListener('click', function() {
+      const { jsPDF } = window.jspdf;
+      html2canvas(document.querySelector('#map')).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('landscape');
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('peta-sungai-kayu-manis.pdf');
+      });
+    });
+
+    // ======================
+    // KONTROL LAYER
+    // ======================
+    const baseLayers = {
+      "Esri Satellite": esriImagery,
+      "Esri Topografi": esriTopo,
+      "OpenStreetMap": osm
+    };
+
+    const overlayLayers = {
+      "Sungai": sungaiBatanghari,
+      "Titik Pemantauan": titikPemantauan,
+      "Kawasan Konservasi": konservasi,
+      "Perkebunan Kayu Manis": cinnamonLayer,
+      "Polygon Buatan": drawnItems
+    };
+
+    L.control.layers(baseLayers, overlayLayers, { position: 'topright' }).addTo(map);
+
+    // Skala Peta
+    L.control.scale({ position: 'bottomleft' }).addTo(map);
   </script>
 </body>
 </html>
